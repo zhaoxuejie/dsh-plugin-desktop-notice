@@ -1,0 +1,32 @@
+{
+  "name": "dsh-plugin-desktop-notice",
+  "version": "0.2.0",
+  "description": "让 DSH 的每一次“需要你”都及时抵达桌面——任务完成 / 等待输入 / 失败 / 关键词，Windows 原生 Toast + 音效 + 手机推送 + 统计浮卡",
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./client": "./src/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "assets", "cordis.patch.yml", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "node --test",
+    "gen:wav": "node tools/gen-wav.mjs",
+    "smoke": "node scripts/adapter-smoke.mjs",
+    "notify:test": "node scripts/notify-check.mjs"
+  },
+  "keywords": ["dsh", "deepseek-harness", "notification", "toast", "desktop-notice"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "schemastery": "^3.18.0"
+  },
+  "license": "MIT"
+}

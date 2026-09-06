@@ -1,0 +1,24 @@
+# ---------- 依赖 ----------
+node_modules/
+# pnpm 本地存储缓存
+.pnpm-store/
+
+# ---------- 运行时数据 / 本地测试产物 ----------
+# 插件运行数据（history.jsonl / stats.json / notice.log）落在 <DSH_HOME>/data/desktop-notice/，不入库
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.tmp
+*.bak
+
+# ---------- 日志 ----------
+*.log
+
+# ---------- 系统与编辑器 ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.iml

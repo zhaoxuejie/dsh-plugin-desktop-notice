@@ -1,0 +1,4 @@
+# dsh-plugin-desktop-notice bundle patch: 挂载桌面通知插件
+- insert:
+    - id: dsh-plugin-desktop-notice
+      name: dsh-plugin-desktop-notice

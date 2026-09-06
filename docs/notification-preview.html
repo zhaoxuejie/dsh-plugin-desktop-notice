@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dsh-plugin-desktop-notice — 桌面通知预览 Demo</title>
+<style>
+  :root {
+    --toast-bg-dark: rgba(43, 43, 43, .86);
+    --toast-border-dark: rgba(255, 255, 255, .07);
+    --toast-title-dark: #ffffff;
+    --toast-text-dark: rgba(255, 255, 255, .78);
+    --toast-sub-dark: rgba(255, 255, 255, .55);
+    --toast-bg-light: rgba(249, 249, 249, .88);
+    --toast-border-light: rgba(0, 0, 0, .07);
+    --toast-title-light: #1a1a1a;
+    --toast-text-light: rgba(0, 0, 0, .62);
+    --toast-sub-light: rgba(0, 0, 0, .45);
+    --green: #4cc38a;
+    --amber: #fcd34d;
+    --red: #ff6b6b;
+    --accent: #7c6cf0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+    overflow: hidden;
+    /* 模拟 Windows 11 桌面壁纸 */
+    background:
+      radial-gradient(1200px 800px at 75% 20%, rgba(124, 108, 240, .35), transparent 60%),
+      radial-gradient(1000px 700px at 20% 80%, rgba(56, 189, 248, .22), transparent 60%),
+      radial-gradient(900px 600px at 50% 50%, rgba(236, 72, 153, .12), transparent 55%),
+      linear-gradient(135deg, #0f1226 0%, #1a1040 45%, #0c1b3a 100%);
+  }
+
+  /* ============ 左侧控制面板 ============ */
+  .panel {
+    position: absolute; top: 40px; left: 40px; width: 340px;
+    background: rgba(20, 20, 30, .72);
+    backdrop-filter: blur(30px) saturate(1.3);
+    border: 1px solid rgba(255, 255, 255, .09);
+    border-radius: 12px; padding: 22px;
+    color: #fff; box-shadow: 0 12px 40px rgba(0, 0, 0, .4);
+  }
+  .panel h1 { font-size: 17px; font-weight: 600; letter-spacing: .2px; }
+  .panel .sub { font-size: 12px; color: rgba(255,255,255,.55); margin: 6px 0 16px; line-height: 1.6; }
+  .panel .group-label { font-size: 11px; color: rgba(255,255,255,.45); margin: 14px 0 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.06); color: #fff; font-size: 13px;
+    cursor: pointer; transition: background .15s, transform .1s; font-family: inherit;
+    text-align: left;
+  }
+  .btn:hover { background: rgba(255,255,255,.12); }
+  .btn:active { transform: scale(.97); }
+  .btn .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .btn.wide { grid-column: span 2; }
+  .seg { display: flex; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    flex: 1; padding: 7px 0; background: transparent; border: none; color: rgba(255,255,255,.6);
+    font-size: 12px; cursor: pointer; font-family: inherit; transition: background .15s;
+  }
+  .seg button.on { background: rgba(255,255,255,.14); color: #fff; }
+  .row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; font-size: 13px; color: rgba(255,255,255,.8); }
+  .switch { width: 40px; height: 22px; border-radius: 11px; background: rgba(255,255,255,.15); position: relative; cursor: pointer; transition: background .2s; border: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .2s; }
+  .switch.on { background: var(--accent); }
+  .switch.on::after { left: 21px; }
+  .note { margin-top: 16px; font-size: 11px; line-height: 1.7; color: rgba(255,255,255,.4); border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; }
+
+  /* ============ 右下角通知堆叠区 ============ */
+  #toasts {
+    position: fixed; right: 16px; bottom: 16px; z-index: 100;
+    display: flex; flex-direction: column; gap: 10px; width: 376px;
+  }
+  .toast {
+    background: var(--toast-bg-dark);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+    backdrop-filter: blur(30px) saturate(1.4);
+    border: 1px solid var(--toast-border-dark);
+    border-radius: 8px; padding: 12px 14px 13px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    color: var(--toast-title-dark);
+    transform-origin: bottom right;
+    animation: slideIn .4s cubic-bezier(.16, 1, .3, 1);
+    transition: opacity .25s, transform .25s;
+  }
+  body.theme-light .toast {
+    background: var(--toast-bg-light);
+    border-color: var(--toast-border-light);
+    color: var(--toast-title-light);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+  }
+  .toast.out { opacity: 0; transform: translateX(40px); }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(120%); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .t-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .t-logo {
+    width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+    background: linear-gradient(135deg, #7c6cf0, #38bdf8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7.5px; font-weight: 700; color: #fff; letter-spacing: .3px;
+  }
+  .t-name { font-size: 11.5px; color: var(--toast-sub-dark); flex: 1; }
+  body.theme-light .t-name { color: var(--toast-sub-light); }
+  .t-time { font-size: 11px; color: var(--toast-sub-dark); margin-right: 4px; }
+  body.theme-light .t-time { color: var(--toast-sub-light); }
+  .t-close {
+    width: 22px; height: 22px; border: none; border-radius: 5px; cursor: pointer;
+    background: transparent; color: inherit; font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; opacity: .55;
+  }
+  .t-close:hover { background: rgba(128,128,128,.25); opacity: 1; }
+
+  .t-title { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; line-height: 1.4; }
+  .t-icon {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #10241a;
+  }
+  .kind-done .t-icon    { background: var(--green); }
+  .kind-waiting .t-icon { background: var(--amber); color: #4a3800; }
+  .kind-error .t-icon   { background: var(--red); color: #fff; }
+  .kind-merge .t-icon   { background: var(--accent); color: #fff; }
+  .t-meta { font-size: 12.5px; margin-top: 5px; color: var(--toast-text-dark); font-variant-numeric: tabular-nums; padding-left: 28px; }
+  body.theme-light .t-meta { color: var(--toast-text-light); }
+  .t-quote { font-size: 12.5px; margin-top: 4px; color: var(--toast-sub-dark); padding-left: 28px; line-height: 1.5; }
+  body.theme-light .t-quote { color: var(--toast-sub-light); }
+  .t-quote { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .t-list { margin: 2px 0 0 28px; font-size: 12.5px; color: var(--toast-text-dark); line-height: 1.7; }
+  body.theme-light .t-list { color: var(--toast-text-light); }
+  .t-list b { color: inherit; font-weight: 600; }
+  .t-actions { display: flex; gap: 8px; margin: 11px 0 1px 28px; }
+  .t-actions button {
+    flex: 1; padding: 6px 0; border-radius: 5px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+    border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit;
+  }
+  .t-actions button.primary { background: var(--accent); border-color: transparent; color: #fff; }
+  .t-actions button:hover { filter: brightness(1.12); }
+  .badge-escalate {
+    display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 9px;
+    font-size: 10.5px; font-weight: 600; background: rgba(252, 211, 77, .18);
+    color: var(--amber); border: 1px solid rgba(252, 211, 77, .35); vertical-align: 1px;
+  }
+  /* 捕获模式（README 截图用）：禁动画 + 藏面板 */
+  html.no-anim *, html.no-anim *::before, html.no-anim *::after { animation: none !important; transition: none !important; }
+  body.capture .panel { display: none; }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <h1>🔔 桌面通知预览 Demo</h1>
+  <div class="sub">dsh-plugin-desktop-notice 三类事件 + 防轰炸合并 + 渐进强提醒的高保真视觉模拟（Windows 11 通知中心风格）。点击按钮，看右下角。</div>
+
+  <div class="group-label">触发事件</div>
+  <div class="btn-grid">
+    <button class="btn" onclick="fire('done')"><span class="dot" style="background:var(--green)"></span>✅ 任务完成</button>
+    <button class="btn" onclick="fire('waiting')"><span class="dot" style="background:var(--amber)"></span>⏸ 等待输入</button>
+    <button class="btn" onclick="fire('error')"><span class="dot" style="background:var(--red)"></span>🔴 任务失败</button>
+    <button class="btn" onclick="fire('merge')"><span class="dot" style="background:var(--accent)"></span>📦 防轰炸合并</button>
+    <button class="btn wide" onclick="fire('escalate')"><span class="dot" style="background:var(--amber)"></span>📣 模拟渐进强提醒（等待 5 分钟未处理）</button>
+  </div>
+
+  <div class="group-label">主题</div>
+  <div class="seg" id="themeSeg">
+    <button data-t="system" class="on">跟随系统</button>
+    <button data-t="dark">深色</button>
+    <button data-t="light">浅色</button>
+  </div>
+
+  <div class="row">
+    <span>🔊 模拟提示音</span>
+    <button class="switch on" id="soundSwitch" onclick="toggleSound()"></button>
+  </div>
+
+  <div class="note">
+    本页为 HTML 高保真模拟；实际插件调用 Windows 原生 WinRT Toast，由系统渲染，
+    样式随系统主题（深/浅色）与版本（Win10/11）略有差异。内容结构以
+    DESIGN.md FR-5 模板为准：标题 ≤40 字符、正文 ≤120 字符。
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/* ================= 主题 ================= */
+const mq = window.matchMedia("(prefers-color-scheme: light)");
+function applyTheme() {
+  const pref = document.querySelector("#themeSeg button.on").dataset.t;
+  const light = pref === "light" || (pref === "system" && mq.matches);
+  document.body.classList.toggle("theme-light", light);
+}
+mq.addEventListener("change", applyTheme);
+document.querySelectorAll("#themeSeg button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#themeSeg button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on"); applyTheme();
+  };
+});
+applyTheme();  // 初始即应用一次：默认"跟随系统"，body 需要立刻拿到 theme-light 类
+
+/* ================= 音效（WebAudio 合成，模拟三套 wav） ================= */
+let soundOn = true, audioCtx = null;
+function toggleSound() { soundOn = !soundOn; document.getElementById("soundSwitch").classList.toggle("on", soundOn); }
+function tone(freq, t0, dur, type = "sine", gain = .07) {
+  const ctx = audioCtx, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(gain, t0 + .012);
+  g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  o.connect(g).connect(ctx.destination);
+  o.start(t0); o.stop(t0 + dur + .05);
+}
+function playSound(kind) {
+  if (!soundOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const t = audioCtx.currentTime + .02;
+    if (kind === "done")   { tone(784, t, .16); tone(1175, t + .13, .3); }
+    if (kind === "waiting"){ tone(988, t, .1); tone(988, t + .16, .16); }
+    if (kind === "error")  { tone(233, t, .22, "sawtooth", .05); tone(196, t + .18, .3, "sawtooth", .05); }
+    if (kind === "merge")  { tone(659, t, .12); tone(880, t + .1, .22); }
+  } catch (e) { /* 音效失败静默——与插件设计一致 */ }
+}
+
+/* ================= 通知构造 ================= */
+const now = () => "刚刚";
+function el(html) { const d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
+
+const TEMPLATES = {
+  done: {
+    stay: 6500, sound: "done",
+    html: () => `
+      <div class="t-title"><span class="t-icon">✓</span>任务完成 · moqian-web (feat/notify)</div>
+      <div class="t-meta">耗时 4 分 12 秒 · 3.2k tokens</div>
+      <div class="t-quote">"已将通知组件接入设置页，测试通过，共改动 5 个文件…"</div>`
+  },
+  waiting: {
+    stay: 30000, sound: "waiting",
+    html: () => `
+      <div class="t-title"><span class="t-icon">⏸</span>AI 在等你 · 需要确认 bash 命令</div>
+      <div class="t-meta">dsh-plugin-desktop-notice</div>
+      <div class="t-quote">"需要运行 npm test 验证改动，等待你的授权…"</div>
+      <div class="t-actions"><button class="primary" onclick="dismissClosest(event,'已聚焦 DSH 窗口')">查看</button><button onclick="dismissClosest(event)">忽略</button></div>`
+  },
+  error: {
+    stay: 8000, sound: "error",
+    html: () => `
+      <div class="t-title"><span class="t-icon">✕</span>任务失败 · api-gateway 调研</div>
+      <div class="t-meta">运行 2 分 47 秒后失败</div>
+      <div class="t-quote">"LlmError: 请求超时（3 次重试后放弃），请检查网络或 API 状态…"</div>`
+  },
+  merge: {
+    stay: 7000, sound: "merge",
+    html: () => `
+      <div class="t-title"><span class="t-icon">3</span>3 个任务完成</div>
+      <div class="t-list">
+        · <b>vault-memory</b> 索引重建 — 2 分 08 秒<br>
+        · <b>moqian-web</b> 前端构建 — 41 秒<br>
+        · <b>调研报告</b> 生成 — 6 分 30 秒
+      </div>`
+  },
+  escalate: {
+    stay: 30000, sound: "waiting",
+    html: () => `
+      <div class="t-title"><span class="t-icon">⏸</span>仍在等你 · bash 命令确认<span class="badge-escalate">5 分钟</span></div>
+      <div class="t-meta">dsh-plugin-desktop-notice</div>
+      <div class="t-quote">"需要运行 npm test 验证改动，等待你的授权…"</div>
+      <div class="t-actions"><button class="primary" onclick="dismissClosest(event,'已聚焦 DSH 窗口')">查看</button><button onclick="dismissClosest(event)">忽略</button></div>`
+  },
+};
+
+const MAX_STACK = 4;
+function fire(kind) {
+  const tpl = TEMPLATES[kind];
+  playSound(tpl.sound);
+  const box = document.getElementById("toasts");
+  // 超过 4 条时最旧的先走（模拟系统堆叠上限）
+  while (box.children.length >= MAX_STACK) box.firstElementChild.remove();
+  const t = el(`
+    <div class="toast kind-${kind}">
+      <div class="t-head">
+        <span class="t-logo">DSH</span><span class="t-name">DeepSeek Harness</span>
+        <span class="t-time">${now()}</span>
+        <button class="t-close" title="关闭">✕</button>
+      </div>
+      ${tpl.html()}
+    </div>`);
+  const close = () => { t.classList.add("out"); setTimeout(() => t.remove(), 260); };
+  t.querySelector(".t-close").onclick = close;
+  box.appendChild(t);
+  setTimeout(() => { if (t.isConnected) close(); }, tpl.stay);
+}
+function dismissClosest(ev, msg) {
+  const t = ev.target.closest(".toast");
+  if (t) { t.classList.add("out"); setTimeout(() => t.remove(), 260); }
+  if (msg) { ev.target.textContent = msg; }
+}
+
+/* ================= 捕获模式：#fire=<kind>&noanim=1&theme=dark（README 截图用） ================= */
+const hashQ = new URLSearchParams(location.hash.slice(1));
+if (hashQ.get("fire") && TEMPLATES[hashQ.get("fire")]) {
+  if (hashQ.get("noanim")) document.documentElement.classList.add("no-anim");
+  if (hashQ.get("theme")) {
+    const tb = document.querySelector(`#themeSeg button[data-t="${hashQ.get("theme")}"]`);
+    if (tb) tb.click();
+  }
+  document.body.classList.add("capture");
+  soundOn = false;   // 无头截图无音频上下文——与插件"音效失败静默降级"同款处理
+  setTimeout(() => fire(hashQ.get("fire")), 120);
+} else {
+  /* 页面加载后自动弹一条，直观起见（不响音效——浏览器要求用户手势后才能出声） */
+  setTimeout(() => fire("done"), 700);
+}
+</script>
+</body>
+</html>

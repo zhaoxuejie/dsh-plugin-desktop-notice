@@ -9,7 +9,7 @@
     "./client": "./src/client.js",
     "./package.json": "./package.json"
   },
-  "files": ["src", "assets", "cordis.patch.yml", "README.md", "LICENSE"],
+  "files": ["src", "assets", "scripts", "cordis.patch.yml", "README.md", "LICENSE"],
   "scripts": {
     "test": "node --test",
     "gen:wav": "node tools/gen-wav.mjs",

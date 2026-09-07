@@ -11,10 +11,10 @@
 | 项 | 事实 |
 |---|---|
 | 宿主版本 | `@deepseek-ai/dsh` **0.1.2-rc.1** |
-| 安装位置 | `C:\Users\Lenovo\AppData\Local\hermes\node\node_modules\@deepseek-ai\dsh`（dsh CLI 同目录） |
+| 安装位置 | `~/AppData/Local/hermes/node/node_modules/@deepseek-ai/dsh`（dsh CLI 同目录） |
 | 宿主包树 | `dsh/node_modules/@deepseek-ai/` 下含全套 `dsh-*` 子包（dsh-session / dsh-jobs / dsh-settings / dsh-user-approval / dsh-user-questions / dsh-host-webserver / …） |
 | DSH_HOME | `process.env.DSH_HOME \|\| path.join(os.homedir(), ".dsh")`（vault-memory 实测写法）；本机 `~/.dsh` 存在（profiles / settings.yaml / sessions / data） |
-| 参考实现 | `D:\projectDsh\dsh-plugin-obsidian`（= `dsh-plugin-vault-memory`，真机验证通过；入口契约：`export const name / inject / Config` + `export function apply(ctx, entryConfig)`） |
+| 参考实现 | `<dsh-plugin-vault-memory 仓库路径>`（= `dsh-plugin-vault-memory`，真机验证通过；入口契约：`export const name / inject / Config` + `export function apply(ctx, entryConfig)`） |
 | 平台 | Windows 10（10.0.19045）x64 |
 
 ---
@@ -139,7 +139,7 @@ abstract onJobDone(listener: JobDoneListener): () => void;   // 返回取消订�
 ## 5. 反查路径索引
 
 ```
-宿主根：C:\Users\Lenovo\AppData\Local\hermes\node\node_modules\@deepseek-ai\dsh\
+宿主根：~/AppData/Local/hermes/node/node_modules/@deepseek-ai/dsh\
 ├── package.json                                    # 版本 0.1.2-rc.1
 └── node_modules\@deepseek-ai\
     ├── dsh-session\lib\types\index.d.ts            # session/event、session/created、信封
@@ -153,6 +153,6 @@ abstract onJobDone(listener: JobDoneListener): () => void;   // 返回取消订�
     ├── dsh-host-webserver\lib\types\index.d.ts     # WebRoute、register（L90）
     └── dsh-atomic-write\…                          # 原子写参考
 
-参考插件：D:\projectDsh\dsh-plugin-obsidian\src\index.mjs   # 入口契约 + settings 用法（真机验证）
+参考插件：<dsh-plugin-vault-memory 仓库路径>\src\index.mjs   # 入口契约 + settings 用法（真机验证）
 本机用户目录：~\.dsh\{profiles, settings.yaml, sessions, data}   # DSH_HOME 实际形态
 ```

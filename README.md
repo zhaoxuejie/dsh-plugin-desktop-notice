@@ -34,8 +34,23 @@
 
 ### 安装
 
+**方式一：npm**
+
 ```bash
-dsh plugin --profile web add <本仓库路径>
+dsh plugin --profile web add dsh-plugin-desktop-notice
+```
+
+**方式二：GitHub**
+
+```bash
+dsh plugin --profile web add github:zhaoxuejie/dsh-plugin-desktop-notice
+```
+
+或 clone 后添加本地路径：
+
+```bash
+git clone https://github.com/zhaoxuejie/dsh-plugin-desktop-notice.git
+dsh plugin --profile web add ./dsh-plugin-desktop-notice
 ```
 
 装好即用（默认配置已是不打扰取向）。

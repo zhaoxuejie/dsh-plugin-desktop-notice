@@ -60,8 +60,9 @@ export function createHistory({ dir, getConfig, log, now = () => Date.now() }) {
         const line = JSON.stringify({ time: now(), ...entry });
         fs.appendFileSync(file, line + "\n");
         lineCount += 1;
-        if (lineCount % 200 === 0) rotate();
-        else rotate();
+        // rotate 幂等：行数截断仅在超限时读文件、天数清理仅在跨天时读文件，故每次都调用
+        // 以确保 keepDays 跨天清理及时触发（不依赖"每 200 条"这一偶然节奏）。
+        rotate();
       } catch (e) {
         log.error(`history append: ${e?.message ?? e}`);
       }

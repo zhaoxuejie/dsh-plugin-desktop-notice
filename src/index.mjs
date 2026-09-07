@@ -25,7 +25,7 @@ export const name = "dsh-plugin-desktop-notice";
 // webServer 走 ctx.get() 不需要 inject（vault-memory 真机先例）。
 export const inject = ["settings", "tools"];
 export const Config = configSchema;
-export const version = "0.2.0";
+export const version = "0.2.1";
 
 export function apply(ctx, entryConfig) {
   const log = createLogger({ debug: false });
@@ -166,6 +166,7 @@ export function apply(ctx, entryConfig) {
   runtime.health = () => ({
     version,
     adapter: adapter.id,
+    registered: adapter.registered, // win32 特有：AUMID 是否注册成功（其余平台 undefined，JSON 省略）
     capabilities: { ...runtime.probe.capabilities, toast: adapter.toastConfirmed ?? runtime.probe.capabilities.toast },
     headless: runtime.probe.headless,
     degraded: runtime.probe.degraded,

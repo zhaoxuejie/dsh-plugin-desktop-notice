@@ -43,6 +43,7 @@ export function createPipeline({
   /** @type {Array<{ kind: string, notice: NoticeEvent, reason: string }>} 勿扰/焦点抑制汇总队列 */
   const suppressed = [];
   let disposed = false;
+  const MAX_SUPPRESSED = 100; // 汇总队列上限：长期勿扰/全屏时避免内存无限增长
 
   const withContent = (kind, n) => ({ ...n, content: buildContent(kind, n, getConfig()) });
 
@@ -167,6 +168,10 @@ export function createPipeline({
 
   /** 被抑制通知入队（FR-4.6）；原因与条目一并交给 sideEffects（历史留痕）。 */
   function suppress(kind, notice, reason) {
+    if (suppressed.length >= MAX_SUPPRESSED) {
+      const dropped = suppressed.shift(); // 队列满丢弃最旧（内存上限优先于逐条补发）
+      log.debug(`[suppressed] 队列已满，丢弃最旧 ${dropped?.kind}（${dropped?.reason}）`);
+    }
     suppressed.push({ kind, notice, reason });
     try { sideEffects.onSuppressed?.(kind, notice, reason); } catch (e) { log.error(`onSuppressed: ${e?.message ?? e}`); }
     log.debug(`[suppressed] ${kind} ← ${reason}（队列 ${suppressed.length}）`);

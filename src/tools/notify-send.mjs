@@ -1,5 +1,6 @@
 // dsh-plugin-desktop-notice — notify_send agent 工具（FR-10，M3）
-// 让 AI 在长任务里主动发通知（"跑完这批叫我"）；走同一管线（受合并节流约束）。
+// 让 AI 在长任务里主动发通知（"跑完这批叫我"）；dispatch 直发：绕过勿扰/合并（AI 主动提醒优先级高），
+// 但受 enabled 总开关约束（关插件 = AI 也不能弹）。事件级开关（events.<kind>.desktop）由 dispatch 内部兜底。
 // 工具形状对齐 vault-memory 真机实现：ctx.tools.register({ name, description, parameters, timeoutMs, output, execute })。
 
 export function registerNotifySendTool(ctx, runtime) {
@@ -35,6 +36,8 @@ export function registerNotifySendTool(ctx, runtime) {
         // 展示层：默认 JSON 卡片即可（output.render 略），
       },
       async execute(args) {
+        // 受 enabled 总开关约束（关插件 = AI 也不能弹）；勿扰/合并仍绕过（主动提醒优先级高）。
+        if (runtime.getConfig?.()?.enabled === false) return { ok: false };
         const kind = ["done", "waiting", "error"].includes(args?.kind) ? args.kind : "done";
         const notice = {
           kind,
@@ -44,7 +47,7 @@ export function registerNotifySendTool(ctx, runtime) {
           detail: undefined,
         };
         const content = { title: String(args?.title ?? "DSH 通知"), body: String(args?.body ?? "").slice(0, 120) };
-        const result = await runtime.pipeline.dispatch(kind, { ...notice, content }); // 直发，绕过合并窗口
+        const result = await runtime.pipeline.dispatch(kind, { ...notice, content }); // dispatch 直发：绕过勿扰/合并
         return { ok: Boolean(result?.toast?.ok || result?.sound?.ok), ...result };
       },
     });

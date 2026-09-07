@@ -76,7 +76,7 @@ export function runPowerShellCapture(script, args, timeoutMs = 3000) {
 
 export function createWin32Adapter({ assetsDir, log }) {
   let consecutiveFailures = 0;
-  let lastSpawnAt = 0;
+  let lastSpawnBySession = new Map(); // sessionKey → 最近 toast 时间戳（per-session 1s 去重，FR-2.5）
   let toastConfirmed = false; // 首条成功 = toast 能力实测确认（probe 的 'unknown' 落定）
   let registered = false;     // 自有 AUMID 是否注册成功
   let registrationPromise = null;
@@ -100,8 +100,15 @@ export function createWin32Adapter({ assetsDir, log }) {
       return { ok: false, skipped: "circuit" };
     }
     const now = Date.now();
-    if (now - lastSpawnAt < 1000) return { ok: false, skipped: "dedupe" };
-    lastSpawnAt = now;
+    const last = lastSpawnBySession.get(sessionKey) ?? 0;
+    if (now - last < 1000) return { ok: false, skipped: "dedupe" };
+    lastSpawnBySession.set(sessionKey, now);
+    // 惰性清理过期桶，避免 Map 随 session 数量无限增长
+    if (lastSpawnBySession.size > 512) {
+      for (const [k, v] of lastSpawnBySession) {
+        if (now - v >= 1000) lastSpawnBySession.delete(k);
+      }
+    }
 
     await ensureRegistered(); // 幂等；失败时 registered=false → 回退旧身份
     const aumid = registered ? AUMID_OWN : AUMID_POWERSHELL;
@@ -125,7 +132,9 @@ export function createWin32Adapter({ assetsDir, log }) {
       consecutiveFailures += 1;
       log.error(`toast spawn 失败: ${r.error}（连续 ${consecutiveFailures} 次）`);
     }
-    return r;
+    // 带上实际使用的身份，供 health / test / smoke 暴露「own vs PowerShell 回退」，
+    // 便于定位「只进通知中心、不弹横幅」——回退 PowerShell AUMID 正是典型病因。
+    return { ...r, aumid };
   }
 
   /** 播放音效。sound: 'success'|'notice'|'alert'（内置）或绝对路径（自定义，P1 开放）；volume: 0-100。 */
@@ -144,6 +153,7 @@ export function createWin32Adapter({ assetsDir, log }) {
   return {
     id: "win32",
     get toastConfirmed() { return toastConfirmed; },
+    get registered() { return registered; },
     notify,
     play,
   };

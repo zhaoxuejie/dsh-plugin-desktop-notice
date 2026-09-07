@@ -25,10 +25,11 @@ export function createTts({ log }) {
 
   /** 播报文本（≤60 字，管线负责截断）。失败静默。 */
   async function speak(text) {
-    const safe = String(text ?? "").slice(0, 60).replace(/["\r\n]/g, " ");
+    // 单引号包裹：PowerShell 单引号内不插值（$ / 反引号安全），仅需转义单引号本身
+    const safe = String(text ?? "").slice(0, 60).replace(/[\r\n]/g, " ").replace(/'/g, "''");
     if (!safe) return { ok: false, skipped: "empty" };
     if (process.platform === "win32") {
-      const script = `Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Volume = 80; $s.Speak("${safe}")`;
+      const script = `Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Volume = 80; $s.Speak('${safe}')`;
       return run(POWERSHELL, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-STA", "-WindowStyle", "Hidden", "-Command", script]);
     }
     if (process.platform === "darwin") {

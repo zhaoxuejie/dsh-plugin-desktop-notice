@@ -22,9 +22,24 @@ if (-not $TargetPath) {
 }
 if (-not $IconPath) { $IconPath = $TargetPath }
 
+# A .lnk that already exists but carries the WRONG (or missing) AUMID still reports
+# "registered = ok" upstream while silently disabling the banner. Verify and rewrite.
+function Get-ShortcutAumid([string]$path) {
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.Namespace((Split-Path -Parent $path))
+        $item = $folder.ParseName((Split-Path -Leaf $path))
+        return [string]$item.ExtendedProperty("System.AppUserModel.ID")
+    } catch { return $null }
+}
+
 if (Test-Path -LiteralPath $ShortcutPath) {
-    Write-Output "already"
-    exit 0
+    $existing = Get-ShortcutAumid $ShortcutPath
+    if ($existing -eq $Aumid) {
+        Write-Output "already"
+        exit 0
+    }
+    Remove-Item -LiteralPath $ShortcutPath -Force
 }
 
 Add-Type -TypeDefinition @'
@@ -97,8 +112,11 @@ public static class ToastShortcutRegistration
         void GetCurFile(out string fileName);
     }
 
+    // PKEY_AppUserModel_ID = {9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3}, pid 5.
+    // (pid 12 is PKEY_AppUserModel_StartPinOption - writing AUMID there leaves
+    //  System.AppUserModel.ID empty, which silently disables the banner.)
     private static readonly PropertyKey AppUserModelID =
-        new PropertyKey(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 12);
+        new PropertyKey(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
 
     public static void Register(string shortcutPath, string aumid, string targetPath, string iconPath)
     {

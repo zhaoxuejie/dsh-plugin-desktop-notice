@@ -5,6 +5,8 @@
 // agent/request-error 不订阅弹窗（waterfall + 重试语义——calibration R2）。
 // user-questions/request 瀑布的透传安全性未校准（calibration §4#5），不启用。
 
+import { createBranchResolver } from "./branch.mjs";
+
 /** @typedef {import("./types.mjs").NoticeEvent} NoticeEvent */
 
 const textOf = (m) => {
@@ -58,6 +60,15 @@ export function subscribe(ctx, hooks) {
     } catch { return undefined; }
   };
 
+  // git 分支（FR-5）：读 <cwd>/.git/HEAD，按 cwd 缓存 5s；cwd 取不到则省略（spec phase2 §5）
+  const branchResolver = createBranchResolver();
+  const cwdOf = (session) => {
+    try {
+      return session?.cwd ?? session?.workspace?.cwd ?? session?.workspace?.path ?? undefined;
+    } catch { return undefined; }
+  };
+  const branchOf = (session) => branchResolver.resolve(cwdOf(session));
+
   const offSessionEvent = ctx.on("session/event", (session, event) => {
     try {
       const sid = String(session?.id ?? "");
@@ -99,7 +110,7 @@ export function subscribe(ctx, hooks) {
           if (Number.isFinite(event.time)) askedAt.set(sid, event.time);
           const detail = [event.data?.toolName, event.data?.reason].filter(Boolean).join(" · ");
           hooks.onNotice("waiting", {
-            kind: "waiting", sessionId: sid, sessionKey: sid, project,
+            kind: "waiting", sessionId: sid, sessionKey: sid, project, branch: branchOf(session),
             detail: detail || "需要你的确认", raw: event.data,
           });
           break;
@@ -126,14 +137,14 @@ export function subscribe(ctx, hooks) {
 
           if (reasonKind === "completed" || reasonKind === "max-tokens") {
             hooks.onNotice("done", {
-              kind: "done", sessionId: sid, sessionKey: sid, project, durationMs,
+              kind: "done", sessionId: sid, sessionKey: sid, project, branch: branchOf(session), durationMs,
               tokens: last.tokens, summary: last.summary,
               detail: reasonKind === "max-tokens" ? "达到输出 token 上限" : undefined,
               raw: event.data,
             });
           } else if (reasonKind === "error") {
             hooks.onNotice("error", {
-              kind: "error", sessionId: sid, sessionKey: sid, project, durationMs,
+              kind: "error", sessionId: sid, sessionKey: sid, project, branch: branchOf(session), durationMs,
               detail: errText(event.data?.reason?.error), raw: event.data,
             });
           }

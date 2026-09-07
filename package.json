@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-desktop-notice",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "让 DSH 的每一次“需要你”都及时抵达桌面——任务完成 / 等待输入 / 失败 / 关键词，Windows 原生 Toast + 音效 + 手机推送 + 统计浮卡",
   "type": "module",
   "main": "src/index.mjs",
@@ -14,7 +14,8 @@
     "test": "node --test",
     "gen:wav": "node tools/gen-wav.mjs",
     "smoke": "node scripts/adapter-smoke.mjs",
-    "notify:test": "node scripts/notify-check.mjs"
+    "notify:test": "node scripts/notify-check.mjs",
+    "diagnose:win": "node scripts/notify-diagnose.mjs"
   },
   "keywords": ["dsh", "deepseek-harness", "notification", "toast", "desktop-notice"],
   "dsh": {
